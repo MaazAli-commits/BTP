@@ -7,11 +7,11 @@ def compute_metrics(features, pids):
     indices = torch.argsort(sim_matrix, dim=-1, descending=True)
     
     mAP = 0.0
-    cmc = torch.zeros(len(pids), len(pids))
+    cmc = torch.zeros(len(pids), len(pids) - 1)
     
     for i in range(len(pids)):
         query_pid = pids[i]
-        gallery_pids = pids[indices[i]]
+        gallery_pids = pids[indices[i][:-1]]
         
         matches = (gallery_pids == query_pid).float()
         
@@ -24,8 +24,8 @@ def compute_metrics(features, pids):
             mAP += ap.item()
             
     mAP = mAP / len(pids) if len(pids) > 0 else 0.0
-    rank1 = cmc[:, 0].mean().item() if len(pids) > 0 else 0.0
-    rank5 = cmc[:, 4].mean().item() if len(pids) > 0 else 0.0
+    rank1 = cmc[:, 0].mean().item() if cmc.shape[1] > 0 else 0.0
+    rank5 = cmc[:, min(4, cmc.shape[1] - 1)].mean().item() if cmc.shape[1] > 0 else 0.0
     
     return {'Rank-1': rank1, 'Rank-5': rank5, 'mAP': mAP}
 

@@ -11,13 +11,14 @@ class ReliabilityAwareMatching(nn.Module):
         self.mode = mode
         self.eps = eps
         
-    def forward(self, text_seq, video_seq, c, q, text_mask=None):
+    def forward(self, text_seq, video_seq, c, q, text_mask=None, apply_weights=True):
         """
         text_seq: (B_q, L_t, D)
         video_seq: (B_g, T, D)
         c: (B_q, L_t) - Query confidence
         q: (B_g, T) - Frame quality
         text_mask: (B_q, L_t) - 1 for valid, 0 for padding
+        apply_weights: bool - whether to apply c_i and q_j reweighting
         
         Returns:
         sim_matrix: (B_q, B_g)
@@ -33,6 +34,13 @@ class ReliabilityAwareMatching(nn.Module):
         # text_seq: (B_q, 1, L_t, D)
         # video_seq: (1, B_g, T, D)
         l_ij = torch.einsum('qid,gjd->qgij', text_seq, video_seq)
+        
+        if not apply_weights:
+            alpha = F.softmax(l_ij, dim=-1)
+            score_ij = alpha * l_ij
+            if text_mask is not None:
+                score_ij = score_ij * text_mask.unsqueeze(1).unsqueeze(-1)
+            return score_ij.sum(dim=(2, 3))
         
         # Expand c and q for broadcast
         # c: (B_q, 1, L_t, 1)

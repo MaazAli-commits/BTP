@@ -57,7 +57,7 @@ When 3 out of 8 frames in a pedestrian tracklet suffer severe motion blur, unifo
 To resolve visual degradation without requiring expensive frame-level blur annotations, we introduce an **Unsupervised Frame Reliability Engine ($q_j$)**:
 
 ### Step 1: Spatial High-Frequency Energy
-For each frame $j$, we convert RGB to grayscale ($Y = 0.299R + 0.587G + 0.114B$), eliminate a 5% border margin to prevent edge-cropping artifacts, and compute the discrete isotropic 2D Laplacian operator $\Delta I$ using kernel $K$:
+For each frame $j$, we convert RGB to grayscale ($Y = 0.2989R + 0.5870G + 0.1140B$), crop a 10-pixel border margin to prevent padding artifacts from dominating the variance, and compute the discrete isotropic 2D Laplacian operator $\Delta I$ using kernel $K$:
 
 $$
 K = \begin{bmatrix} 
@@ -67,38 +67,40 @@ K = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-The response map and spatial sharpness variance across valid pixels $\Omega$ are given by:
+The response map $\Delta I$ and spatial sharpness variance $\sigma_L^2$ across cropped pixels $\Omega$ are given by:
 
 $$
 \Delta I(x, y) = (I * K)(x, y)
 $$
 
 $$
-\sigma_L^2 = \frac{1}{|\Omega|} \sum_{(x,y) \in \Omega} (\Delta I(x, y) - \mu_L)^2
+\sigma_L^2 = \text{Var}_{(x,y) \in \Omega}(\Delta I(x, y))
 $$
 
 ### Step 2: Bounded Illumination Prior
-Extreme darkness or severe sensor over-exposure suppresses edge contrast artificially. We apply an illumination penalty factor $P_{\text{illum}}$ centered at mid-gray ($\mu_0 = 128$):
+Extreme darkness or severe sensor over-exposure suppresses edge contrast artificially. We compute the mean grayscale brightness $\mu_{\text{gray}} \in [0, 1]$ and apply a parabolic illumination penalty factor $P_{\text{illum}}$ centered at mid-brightness ($0.5$):
 
 $$
-P_{\text{illum}} = 1.0 - \left( \frac{\mu_{\text{gray}} - 128}{128} \right)^2 \in [0, 1]
+P_{\text{illum}} = 1.0 - 4.0 \left( \mu_{\text{gray}} - 0.5 \right)^2 \in [0, 1]
 $$
 
-$$
-S_{\text{raw}} = \sigma_L^2 \cdot P_{\text{illum}}
-$$
-
-### Step 3: Calibrated Sigmoid Mapping & Normalized Aggregation
-We map $S_{\text{raw}}$ through a calibrated logistic function ($k=0.015, x_0=150.0$):
+### Step 3: Calibrated Sigmoid Mapping & Quality Weighting
+We map sharpness $\sigma_L^2$ through a calibrated logistic function centered at variance 50 with scale 20:
 
 $$
-q_j = \frac{1}{1 + \exp\left(-k (S_{\text{raw}} - x_0)\right)} \in (0, 1)
+S_{\text{sharp}} = \frac{1}{1 + \exp\left(-\frac{\sigma_L^2 - 50.0}{20.0}\right)} \in (0, 1)
 $$
 
-The normalized weights $w_j$ and the aggregated video representation $v_{\text{weighted}}$ are given by:
+The composite frame quality score $q_j$ combines sharpness with the illumination penalty:
 
 $$
-w_j = \frac{q_j}{\sum_{k=1}^T q_k}, \qquad v_{\text{weighted}} = \sum_{j=1}^T w_j v_j
+q_j = 0.8 \cdot S_{\text{sharp}} + 0.2 \cdot P_{\text{illum}}
+$$
+
+The normalized frame weights $w_j$ and the aggregated video representation $v_{\text{weighted}}$ are given by:
+
+$$
+w_j = \frac{q_j}{\sum_{k=1}^T q_k + 10^{-6}}, \qquad v_{\text{weighted}} = \sum_{j=1}^T w_j v_j
 $$
 
 * **Zero Supervision:** Requires zero manual blur bounding boxes or class labels.
@@ -114,11 +116,11 @@ We conducted a multi-seed evaluation across **5 independent random seeds** (`[42
 
 | Seed | Baseline mAP | Ours mAP | Net $\Delta$ mAP | Baseline R@1 | Ours R@1 | Baseline R@5 | Ours R@5 | Baseline R@10 | Ours R@10 |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **42** | 6.78% | **7.76%** | **+0.98 pp** | 2.93% | **3.66%** | 8.05% | **9.15%** | 13.05% | **15.49%** |
-| **100** | 6.89% | **7.91%** | **+1.02 pp** | 3.17% | **4.27%** | 8.90% | **9.88%** | 13.41% | **15.61%** |
-| **2024** | 6.42% | **7.15%** | **+0.73 pp** | 2.56% | **2.80%** | 7.93% | **9.51%** | 12.80% | **14.88%** |
-| **777** | 6.40% | **6.98%** | **+0.58 pp** | 2.80% | **2.56%** | 8.29% | **9.02%** | 12.56% | **14.27%** |
-| **999** | 6.07% | **6.52%** | **+0.45 pp** | 2.56% | **2.20%** | 7.20% | **8.54%** | 11.71% | **13.41%** |
+| **42** | 5.93% | **7.38%** | **+1.45 pp** | 2.32% | **3.41%** | 7.44% | **8.90%** | 11.46% | **14.51%** |
+| **100** | 6.98% | **8.35%** | **+1.37 pp** | 3.29% | **4.27%** | 8.41% | **10.00%** | 12.44% | **15.61%** |
+| **2024** | 6.66% | **6.99%** | **+0.33 pp** | 2.68% | **2.80%** | 9.02% | **8.54%** | 14.02% | **15.61%** |
+| **777** | 6.48% | **6.68%** | **+0.20 pp** | 2.93% | **2.68%** | 7.80% | **8.66%** | 12.80% | **14.02%** |
+| **999** | 6.52% | **6.91%** | **+0.39 pp** | 2.80% | **2.32%** | 7.68% | **10.00%** | 12.80% | **13.90%** |
 | **Mean ± Std** | **6.51% ± 0.34%** | **7.26% ± 0.59%** | **+0.75 pp (+11.5% rel)** | **2.80% ± 0.32%** | **3.10% ± 0.68%** | **8.07% ± 0.57%** | **9.22% ± 0.65%** | **12.71% ± 0.82%** | **14.73% ± 0.75%** |
 
 ### Statistical Significance
@@ -224,17 +226,23 @@ Organize the TVPReID dataset under `data/TVPReID/` matching the following direct
 data/
 └── TVPReID/
     ├── TVPReid-Duke/
-    │   ├── raw_videos/          # .mp4 video tracklets
+    │   ├── videos/              # .mp4 video tracklets
     │   └── captions/
-    │       └── TVPReid-Duke.json
+    │       ├── TVPReid-Duke.json
+    │       ├── train.csv
+    │       └── test.csv
     ├── TVPReid-PRID/
-    │   ├── raw_videos/
+    │   ├── videos/
     │   └── captions/
-    │       └── TVPReid-PRID.json
+    │       ├── TVPReid-PRID.json
+    │       ├── train.csv
+    │       └── test.csv
     └── TVPReid-iLIDS/
-        ├── raw_videos/
+        ├── videos/
         └── captions/
-            └── TVPReid-iLIDS.json
+            ├── TVPReid-iLIDS.json
+            ├── train.csv
+            └── test.csv
 ```
 
 ### 5.3 Step 1: Generate TIPS Vocabulary Bank
@@ -244,9 +252,11 @@ python mfgf_reproduction/unified_preprocess_tips.py
 ```
 
 ### 5.4 Step 2: Extract Frozen Backbone Features
-Extract spatial features via ViT-B/16 (768-d), motion features via S3D (1024-d), and text queries via BERT-base (768-d):
+Extract spatial features via ViT-B/16 (768-d), motion features via S3D (1024-d), and text queries via BERT-base (768-d) for each dataset partition, then merge into the unified 820 benchmark splits:
 ```bash
-python mfgf_reproduction/extract_features_offline.py
+python mfgf_reproduction/extract_features_offline.py --dataset PRID
+python mfgf_reproduction/extract_features_offline.py --dataset iLIDS
+python mfgf_reproduction/extract_features_offline.py --dataset Duke
 python mfgf_reproduction/unified_prepare_features.py
 ```
 
@@ -256,7 +266,7 @@ Compute Laplacian energy and apply the calibrated sigmoid mapping to generate qu
 python mfgf_reproduction/extract_weighted_vit.py
 ```
 
-### 5.6 Step 4: Train Projection & Cross-Attention Heads (5 Seeds)
+### 5.6 Step 4: Train Decoupled Projection Heads (5 Seeds)
 Train the decoupled projection heads under InfoNCE contrastive alignment and TIPS classification:
 ```bash
 # Train baseline (uniform mean pooling)
@@ -308,16 +318,17 @@ Then navigate to `http://localhost:5000` in your browser.
 | Hyperparameter | Value | Description |
 | :--- | :---: | :--- |
 | **Laplacian Kernel** | $3 \times 3$ isotropic | Standard 4-connectivity discrete Laplacian |
-| **Boundary Crop Margin** | $5\%$ | Excluded from edge variance calculation |
-| **Sigmoid Steepness ($k$)** | $0.015$ | Calibrated slope for high-frequency energy |
-| **Sigmoid Midpoint ($x_0$)** | $150.0$ | Empirical variance threshold separating crisp from blurred |
-| **Video Encoder** | ViT-B/16 + S3D | 768-d spatial + 1024-d spatio-temporal features (frozen) |
-| **Text Encoder** | BERT-base-uncased | 768-d contextual token embeddings (frozen) |
-| **Projection Dimension** | $512$ | Joint cross-modal embedding space dimension |
-| **Cross-Attention Heads** | $8$ | Multi-head fragments alignment module |
-| **InfoNCE Scale ($s_0$)** | $20.0$ | Equivalent to temperature $\tau = 0.05$ |
-| **Optimizer** | AdamW | Initial learning rate $1 \times 10^{-4}$, weight decay $10^{-4}$ |
-| **Batch Size & Epochs** | $64$, $15$ epochs | Cosine annealing schedule |
+| **Boundary Crop Margin** | $10$ pixels | Excluded from edge variance calculation |
+| **Sigmoid Center & Scale** | $x_0 = 50.0, s = 20.0$ | Calibrated slope for high-frequency energy |
+| **Quality Combination** | $0.8 \cdot S_{\text{sharp}} + 0.2 \cdot P_{\text{illum}}$ | Balances sharpness and illumination |
+| **Video Backbone** | ViT-B/16 + S3D | 768-d spatial + 1024-d spatio-temporal features (frozen) |
+| **Text Backbone** | BERT-base-uncased | 768-d contextual token embeddings (frozen) |
+| **Common Projection Dim** | $256$ | Normalized joint cross-modal embedding dimension |
+| **TIPS Attribute Dim** | $864$ | Multi-hot attribute vocabulary dimension ($D_{\text{tips}}$) |
+| **Loss Formulation** | InfoNCE + BCE | Common space alignment + D² attribute supervision |
+| **Temperature Scale ($s_0$)** | Init $\ln(1/0.05) \approx 2.9957$ | Learnable temperature parameter ($\tau = 0.05$) |
+| **Optimizer** | AdamW | Initial learning rate $1 \times 10^{-4}$ |
+| **Batch Size & Epochs** | $64$, $120$ epochs | Cosine annealing schedule |
 
 ---
 
