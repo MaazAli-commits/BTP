@@ -1,0 +1,20 @@
+# Core Deep Learning Framework
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# NLP & Multimodal Encoders
+transformers>=4.30.0
+nltk>=3.8.0
+
+# Numerical, Scientific & Image Processing
+numpy>=1.24.0
+scipy>=1.10.0
+opencv-python>=4.7.0
+pillow>=9.5.0
+decord>=0.6.0
+
+# Utilities, Configurations & Web Demonstration
+pyyaml>=6.0
+tqdm>=4.65.0
+flask>=2.3.0
