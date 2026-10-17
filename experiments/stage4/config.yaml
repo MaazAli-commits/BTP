@@ -1,0 +1,7 @@
+batch_size: 2
+data_dir: e:/BTP/data/MEVID_dummy
+exp_dir: experiments/stage4
+matching_mode: post_softmax
+model_name: openai/clip-vit-base-patch32
+num_frames: 4
+seed: 42

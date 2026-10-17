@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TVPReID — Cross-Camera Video Person Re-Identification under Dual Degradation</title>
+  <meta name="description" content="Interactive Demonstration of Query-Based Cross-Camera Video Person Re-Identification under Dual Degradation (Team 33 BTP)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=6">
+</head>
+<body>
+  <!-- Background Glow Accents -->
+  <div class="glow-orb glow-orb-1"></div>
+  <div class="glow-orb glow-orb-2"></div>
+
+  <!-- Header & Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-badge">BTP — Team 33</div>
+        <h1 class="brand-title">TVPReID <span class="gradient-text">Reliability Engine</span></h1>
+        <p class="brand-subtitle">Cross-Camera Video Person Re-Identification under Dual Degradation</p>
+      </div>
+
+      <nav class="nav-tabs" role="tablist">
+        <button class="nav-tab active" data-tab="tab-retrieval" id="btn-tab-retrieval">
+          <span class="tab-icon">🔍</span>
+          <span>Live Retrieval Demo</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-benchmarks" id="btn-tab-benchmarks">
+          <span class="tab-icon">📊</span>
+          <span>Benchmark Analytics</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-methodology" id="btn-tab-methodology">
+          <span class="tab-icon">📐</span>
+          <span>Novelty & Methodology</span>
+        </button>
+      </nav>
+
+      <div class="system-status">
+        <span class="status-indicator"></span>
+        <span class="status-text" id="status-label">Engine Ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="main-container">
+    
+    <!-- ========================================== -->
+    <!-- TAB 1: LIVE RETRIEVAL DEMO                -->
+    <!-- ========================================== -->
+    <section id="tab-retrieval" class="tab-content active">
+      
+      <!-- Query Input Panel -->
+      <div class="glass-card search-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">🎯</span>
+            <h2>Natural Language Witness Query</h2>
+          </div>
+          <span class="badge badge-accent">Interactive Cross-Modal Search</span>
+        </div>
+
+        <div class="search-input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">💬</span>
+            <input type="text" id="input-query" placeholder="Describe the target pedestrian (e.g. 'man in white t-shirt and blue pants')..." value="The man is wearing a white t-shirt and he is wearing blue pants. He has short and black hair. He is wearing a white shoes.">
+          </div>
+          <button class="btn btn-primary" id="btn-run-search">
+            <span>Execute Retrieval</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+
+        <!-- Curated Preset Buttons -->
+        <div class="presets-section">
+          <span class="presets-label">Preset Surveillance Scenarios:</span>
+          <div class="presets-grid" id="presets-container">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Degradation & Reliability Simulator Toolbar -->
+      <div class="glass-card controls-toolbar">
+        <div class="control-col">
+          <label class="control-label">Surveillance Condition</label>
+          <div class="toggle-group" id="condition-toggle">
+            <button class="toggle-btn active" data-value="clean" id="btn-cond-clean">
+              <span class="dot dot-success"></span>
+              <span>Clean Footage</span>
+            </button>
+            <button class="toggle-btn" data-value="corrupted" id="btn-cond-corrupted">
+              <span class="dot dot-danger"></span>
+              <span>50% Gaussian Blur</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-col">
+          <label class="control-label">Matching Algorithm</label>
+          <div class="toggle-group" id="method-toggle">
+            <button class="toggle-btn" data-value="mean" id="btn-method-mean">
+              <span>Standard Mean Pool</span>
+            </button>
+            <button class="toggle-btn active" data-value="weighted" id="btn-method-weighted">
+              <span class="sparkle">★</span>
+              <span>Our Reliability (q<sub>j</sub>)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-col">
+          <label class="control-label">Gallery Filter</label>
+          <div class="select-wrapper">
+            <select id="select-dataset">
+              <option value="all">Unified Gallery (820 Videos)</option>
+              <option value="Duke">DukeMTMC Subset (603)</option>
+              <option value="PRID">PRID-2011 Subset (142)</option>
+              <option value="iLIDs">iLIDS-VID Subset (75)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-col action-col">
+          <button class="btn btn-secondary" id="btn-toggle-compare">
+            <span class="btn-icon">⚡</span>
+            <span id="compare-btn-text">Compare Baseline vs Ours</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Search Results Gallery -->
+      <div class="results-container">
+        <div class="results-header">
+          <div class="results-meta">
+            <h3>Retrieved Surveillance Candidates</h3>
+            <span class="results-count" id="results-count-label">Top 6 Ranked Matches</span>
+          </div>
+          <div class="recovery-status-banner" id="recovery-banner">
+            <span class="status-icon">✓</span>
+            <span id="recovery-text">Target Identified at Rank #1</span>
+          </div>
+        </div>
+
+        <!-- Target Tracker Container (for deep/outside top-6 tracking) -->
+        <div id="target-tracker-container" class="target-tracker-wrapper hidden"></div>
+
+        <!-- Single View Grid -->
+        <div class="video-grid" id="video-results-grid">
+          <!-- Dynamically populated video cards -->
+        </div>
+
+        <!-- Side-by-Side Comparison Container (Hidden by default) -->
+        <div class="comparison-container hidden" id="comparison-container">
+          <div class="comparison-column">
+            <div class="col-header badge-danger-soft">
+              <h4>Standard Mean Pooling (Baseline)</h4>
+              <span class="col-meta" id="compare-baseline-meta">Under 50% Blur</span>
+            </div>
+            <div class="video-grid compact-grid" id="compare-baseline-grid"></div>
+          </div>
+          <div class="comparison-column">
+            <div class="col-header badge-success-soft">
+              <h4>Our Reliability-Aware Matching (q<sub>j</sub>)</h4>
+              <span class="col-meta" id="compare-weighted-meta">Under 50% Blur</span>
+            </div>
+            <div class="video-grid compact-grid" id="compare-weighted-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame Quality Estimator (q_j) Deep-Dive Card -->
+      <div class="glass-card quality-inspector-card">
+        <div class="quality-header">
+          <div class="card-title-group">
+            <span class="card-icon">📈</span>
+            <h3>Unsupervised Frame Quality Breakdown (q<sub>j</sub>)</h3>
+          </div>
+          <div class="quality-badges">
+            <span class="badge badge-subtle" id="q-status-badge">Frame Quality Inspector</span>
+            <span class="badge badge-cyan" id="q-formula-badge">w<sub>j</sub> = q<sub>j</sub> / ∑ q<sub>k</sub></span>
+          </div>
+        </div>
+
+        <div class="quality-timeline-container">
+          <div class="timeline-frames" id="quality-bars-container">
+            <!-- Dynamically populated 8 frame bars -->
+          </div>
+          <div class="quality-explanation">
+            <p id="quality-explanation-text">
+              <strong>Pristine Footage:</strong> All 8 frames exhibit sharp edge gradients and balanced illumination (q<sub>j</sub> &approx; <strong>0.78 &ndash; 0.85</strong>). Quality weights are distributed uniformly, preserving natural temporal feature aggregation.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: BENCHMARK ANALYTICS                -->
+    <!-- ========================================== -->
+    <section id="tab-benchmarks" class="tab-content">
+      
+      <!-- Benchmark Selector Pills -->
+      <div class="bench-nav-container">
+        <div class="bench-tabs" id="bench-dataset-tabs">
+          <button class="bench-tab active" data-dataset="unified">Unified Benchmark (820 Videos)</button>
+          <button class="bench-tab" data-dataset="duke">DukeMTMC Subset</button>
+          <button class="bench-tab" data-dataset="prid">PRID-2011 Subset</button>
+          <button class="bench-tab" data-dataset="ilids">iLIDS-VID Subset</button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid" id="bench-kpi-grid">
+        <div class="glass-card kpi-card">
+          <span class="kpi-title">Rank-1 Retrieval (Corrupted)</span>
+          <div class="kpi-value-group">
+            <span class="kpi-value gradient-text" id="kpi-r1">3.10%</span>
+            <span class="kpi-badge badge-success" id="kpi-r1-gain">+10.7% rel</span>
+          </div>
+          <span class="kpi-subtext" id="kpi-r1-sub">Baseline: 2.80% ± 0.32%</span>
+        </div>
+
+        <div class="glass-card kpi-card">
+          <span class="kpi-title">Rank-5 Retrieval (Corrupted)</span>
+          <div class="kpi-value-group">
+            <span class="kpi-value gradient-text" id="kpi-r5">9.22%</span>
+            <span class="kpi-badge badge-success" id="kpi-r5-gain">+14.2% rel</span>
+          </div>
+          <span class="kpi-subtext" id="kpi-r5-sub">Baseline: 8.07% ± 0.57%</span>
+        </div>
+
+        <div class="glass-card kpi-card">
+          <span class="kpi-title">Rank-10 Retrieval (Corrupted)</span>
+          <div class="kpi-value-group">
+            <span class="kpi-value gradient-text" id="kpi-r10">14.73%</span>
+            <span class="kpi-badge badge-success" id="kpi-r10-gain">+15.9% rel</span>
+          </div>
+          <span class="kpi-subtext" id="kpi-r10-sub">Baseline: 12.71% ± 0.82%</span>
+        </div>
+
+        <div class="glass-card kpi-card">
+          <span class="kpi-title">mAP Score (Corrupted)</span>
+          <div class="kpi-value-group">
+            <span class="kpi-value gradient-text" id="kpi-map">7.26%</span>
+            <span class="kpi-badge badge-success" id="kpi-map-gain">+11.5% rel</span>
+          </div>
+          <span class="kpi-subtext" id="kpi-map-sub">Baseline: 6.51% ± 0.34%</span>
+        </div>
+      </div>
+
+      <!-- Charts & Visual Comparison -->
+      <div class="charts-section glass-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">📊</span>
+            <h3 id="chart-section-title">5-Seed Comparative Retrieval Performance</h3>
+          </div>
+          <span class="badge badge-cyan">Audited Empirical Proof</span>
+        </div>
+
+        <div class="chart-container" id="chart-bars-container">
+          <!-- Dynamically generated SVG comparison bars -->
+        </div>
+      </div>
+
+      <!-- Ground Truth Table Card -->
+      <div class="glass-card table-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">📋</span>
+            <h3>Audited Ground Truth Results (5-Seed Mean ± Std)</h3>
+          </div>
+          <span class="badge badge-accent">100% Verifiable Logs</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="benchmark-table" id="benchmarks-data-table">
+            <thead>
+              <tr>
+                <th>Test Condition</th>
+                <th>Method</th>
+                <th>Rank-1 (%)</th>
+                <th>Rank-5 (%)</th>
+                <th>Rank-10 (%)</th>
+                <th>mAP (%)</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarks-table-body">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: NOVELTY & METHODOLOGY              -->
+    <!-- ========================================== -->
+    <section id="tab-methodology" class="tab-content">
+      
+      <!-- The Core Mathematical Formula Card -->
+      <div class="glass-card formula-card">
+        <div class="formula-badge-container">
+          <span class="badge badge-accent">Primary Mathematical Contribution</span>
+        </div>
+        <h2 class="formula-title">Reliability-Aware Cross-Modal Attention Formula</h2>
+        
+        <div class="math-display-box">
+          <div class="math-formula">
+            &alpha;'<sub>ij</sub> = 
+            <span class="frac">
+              <span class="numerator">&alpha;<sub>ij</sub> &middot; c<sub>i</sub> &middot; q<sub>j</sub></span>
+              <span class="denominator">&sum;<sub>i,j</sub> &alpha;<sub>ij</sub> &middot; c<sub>i</sub> &middot; q<sub>j</sub></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="parameters-grid">
+          <div class="param-card">
+            <span class="param-symbol">&alpha;<sub>ij</sub></span>
+            <h4>Cross-Modal Attention</h4>
+            <p>Baseline token-level cosine similarity between text word <em>i</em> and video frame <em>j</em>.</p>
+          </div>
+          <div class="param-card active-card">
+            <span class="param-symbol">q<sub>j</sub></span>
+            <h4>Frame Quality Estimator</h4>
+            <span class="badge badge-success">Semester 1 Verified</span>
+            <p>Unsupervised Laplacian variance & illumination metric downweighting blurred CCTV frames.</p>
+          </div>
+          <div class="param-card future-card">
+            <span class="param-symbol">c<sub>i</sub></span>
+            <h4>Text Confidence Weight</h4>
+            <span class="badge badge-cyan">Semester 2 Roadmap</span>
+            <p>Linguistic uncertainty parsing that downweights hedged witness attributes (<em>"maybe"</em>, <em>"probably"</em>).</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Semester 1 vs 2 Timeline Roadmap -->
+      <div class="roadmap-grid">
+        <div class="glass-card roadmap-col completed-roadmap">
+          <div class="roadmap-badge-row">
+            <span class="badge badge-success">Semester 1 — Achieved & Audited</span>
+          </div>
+          <h3>Baseline Reproduction & Visual Reliability</h3>
+          <ul class="roadmap-checklist">
+            <li>
+              <span class="check-icon">✓</span>
+              <div>
+                <strong>TVPReID Data Pipeline</strong>
+                <p>Paired text-video dataset loading established on PRID, iLIDS, and Duke.</p>
+              </div>
+            </li>
+            <li>
+              <span class="check-icon">✓</span>
+              <div>
+                <strong>VCLIP Baseline Architecture (Models 1–4)</strong>
+                <p>Reproduced across all individual datasets and unified 820-video benchmark.</p>
+              </div>
+            </li>
+            <li>
+              <span class="check-icon">✓</span>
+              <div>
+                <strong>MFGF Multi-Space Alignment Framework</strong>
+                <p>Reproduced with offline caching to overcome Windows memory limits.</p>
+              </div>
+            </li>
+            <li>
+              <span class="check-icon">✓</span>
+              <div>
+                <strong>Frame Quality Module (q<sub>j</sub>) Robustness</strong>
+                <p>Validated under 50% Gaussian blur across 5 seeds with proven retrieval gains.</p>
+              </div>
+            </li>
+            <li>
+              <span class="check-icon">✓</span>
+              <div>
+                <strong>Unified Cross-Dataset MFGF Model</strong>
+                <p>Unified 864-keyword TIPS bank trained and benchmarked across all 820 test sequences.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="glass-card roadmap-col planned-roadmap">
+          <div class="roadmap-badge-row">
+            <span class="badge badge-cyan">Semester 2 — Full Thesis Roadmap</span>
+          </div>
+          <h3>Linguistic Uncertainty & Dual Degradation</h3>
+          <ul class="roadmap-checklist">
+            <li>
+              <span class="future-icon">→</span>
+              <div>
+                <strong>Text Confidence Module (c<sub>i</sub>)</strong>
+                <p>Linguistic uncertainty parsing for witness hedging words (<em>"maybe"</em>, <em>"probably"</em>).</p>
+              </div>
+            </li>
+            <li>
+              <span class="future-icon">→</span>
+              <div>
+                <strong>4-Way Scientific Ablation Matrix</strong>
+                <p>Rigorously evaluate: Baseline vs. +q<sub>j</sub> vs. +c<sub>i</sub> vs. +q<sub>j</sub>c<sub>i</sub>.</p>
+              </div>
+            </li>
+            <li>
+              <span class="future-icon">→</span>
+              <div>
+                <strong>Simultaneous Dual Degradation Testing</strong>
+                <p>Evaluate retrieval when both witness query is incomplete and CCTV footage is degraded.</p>
+              </div>
+            </li>
+            <li>
+              <span class="future-icon">→</span>
+              <div>
+                <strong>Visual Attention Heatmaps & Thesis</strong>
+                <p>Generate cross-modal attention maps and finalize the complete BTP dissertation.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Team 33 Project Credits Footer -->
+      <div class="glass-card credits-card">
+        <div class="credits-content">
+          <div class="credits-info">
+            <span class="credits-badge">B.Tech Capstone Project — Team 33</span>
+            <h3>Query-Based Cross-Camera Video Person Re-Identification under Dual Degradation</h3>
+            <p>Supervised Research in Video-Language Alignment, Surveillance Analytics, and Robust Multi-Modal Retrieval.</p>
+          </div>
+          <div class="team-members">
+            <div class="member-pill">Mohammed Maaz Ali</div>
+            <div class="member-pill">Rupsika</div>
+            <div class="member-pill">Siva</div>
+            <div class="member-pill">Harshith</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="app.js?v=6"></script>
+</body>
+</html>

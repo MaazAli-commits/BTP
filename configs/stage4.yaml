@@ -1,0 +1,7 @@
+data_dir: "e:/BTP/data/MEVID_dummy"
+num_frames: 4
+batch_size: 2
+model_name: "openai/clip-vit-base-patch32"
+exp_dir: "experiments/stage4"
+seed: 42
+matching_mode: "post_softmax" # or 'logit_space'

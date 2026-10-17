@@ -1,0 +1,41 @@
+# Python & Environment
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Caches & Logs
+.cache/
+huggingface/
+*.log
+static/video_cache/
+
+# Large Datasets & Extracted Feature Caches
+data/TVPReID/
+data/*.zip
+data/*.tar*
+data/MEVID_dummy/
+mfgf_reproduction/data/
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+
+# Checkpoints
+experiments/checkpoints/
+
+# Nested HuggingFace Space Repository
+hf_space/
+
+# Temporary / Scratch images
+scratch_*.jpg
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
