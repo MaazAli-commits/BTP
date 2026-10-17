@@ -127,6 +127,11 @@ BTP/
 │   ├── train_unified_mfgf.py            # Train projection & cross-attention heads
 │   ├── evaluate_unified_mfgf.py         # Multi-metric rank evaluator (mAP, R@1/5/10)
 │   └── run_unified_experiments.py       # Master automated 5-seed training & test runner
+├── scripts/                             # Utility & evaluation execution scripts
+│   ├── find_cases.py                    # Demo case finder
+│   ├── pretranscode_videos.py           # Video transcoding helper
+│   ├── train_unified.py                 # Alternate training runner
+│   └── evaluate_unified.py              # Alternate eval runner
 ├── src/                                 # Core foundational modules
 │   ├── dataset/
 │   │   ├── tvpreid.py                   # PyTorch dataset loader for video tracklets
@@ -140,8 +145,15 @@ BTP/
 │   ├── app.js                           # State machine, neural search client, video player
 │   ├── index.html                       # Semantic layout with glassmorphic cards
 │   └── style.css                        # Modern responsive dark-mode styling
+├── tests/                               # Verification & unit tests
+│   ├── test_metrics.py                  # Evaluation metrics assertions
+│   ├── test_neural_search.py            # Real-time search testing
+│   ├── test_search.py                   # Metadata retrieval testing
+│   └── test_server_api.py               # Flask demo server API tests
 ├── demo_server.py                       # Live Flask demonstration backend with real-time BERT
 ├── demo_data.json                       # 820-gallery metadata, captions, and preset scenarios
+├── generate_demo_data.py                # Precomputes gallery representations
+├── run_demo.bat                         # Quick launcher for local demo
 ├── requirements.txt                     # Pinned environment dependencies
 └── README.md                            # Project documentation
 ```
