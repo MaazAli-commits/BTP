@@ -43,7 +43,11 @@ In modern surveillance forensics, locating a suspect across non-overlapping CCTV
 
 ### Why Existing Methods Fail
 Standard video Re-ID backbones aggregate frame-level feature embeddings $\{v_j\}_{j=1}^T$ using **Uniform Mean Pooling**:
-$$v_{\text{mean}} = \frac{1}{T} \sum_{j=1}^T v_j$$
+
+$$
+v_{\text{mean}} = \frac{1}{T} \sum_{j=1}^T v_j
+$$
+
 When 3 out of 8 frames in a pedestrian tracklet suffer severe motion blur, uniform pooling treats blurry artifacts and clear discriminative cues identically ($w_j = 0.125$). The degraded frames dilute the identity signature, dragging true target candidates out of the top retrieval ranks (e.g., dropping from Rank-1 to Rank-35).
 
 ---
@@ -53,24 +57,52 @@ When 3 out of 8 frames in a pedestrian tracklet suffer severe motion blur, unifo
 To resolve visual degradation without requiring expensive frame-level blur annotations, we introduce an **Unsupervised Frame Reliability Engine ($q_j$)**:
 
 ### Step 1: Spatial High-Frequency Energy
-For each frame $j$, we convert RGB to grayscale ($Y = 0.299R + 0.587G + 0.114B$), eliminate a 5% border margin to prevent edge-cropping artifacts, and compute the discrete isotropic 2D Laplacian operator $\Delta I$:
-$$K = \begin{bmatrix} 0 & 1 & 0 \\ 1 & -4 & 1 \\ 0 & 1 & 0 \end{bmatrix}, \quad \Delta I(x, y) = (I * K)(x, y)$$
-The sharpness energy is measured by the variance of the response map:
-$$\sigma_L^2 = \frac{1}{|\Omega|} \sum_{(x,y) \in \Omega} (\Delta I(x, y) - \mu_L)^2$$
+For each frame $j$, we convert RGB to grayscale ($Y = 0.299R + 0.587G + 0.114B$), eliminate a 5% border margin to prevent edge-cropping artifacts, and compute the discrete isotropic 2D Laplacian operator $\Delta I$ using kernel $K$:
+
+$$
+K = \begin{bmatrix} 
+0 & 1 & 0 \\ 
+1 & -4 & 1 \\ 
+0 & 1 & 0 
+\end{bmatrix}
+$$
+
+The response map and spatial sharpness variance across valid pixels $\Omega$ are given by:
+
+$$
+\Delta I(x, y) = (I * K)(x, y)
+$$
+
+$$
+\sigma_L^2 = \frac{1}{|\Omega|} \sum_{(x,y) \in \Omega} (\Delta I(x, y) - \mu_L)^2
+$$
 
 ### Step 2: Bounded Illumination Prior
 Extreme darkness or severe sensor over-exposure suppresses edge contrast artificially. We apply an illumination penalty factor $P_{\text{illum}}$ centered at mid-gray ($\mu_0 = 128$):
-$$P_{\text{illum}} = 1.0 - \left( \frac{\mu_{\text{gray}} - 128}{128} \right)^2 \in [0, 1]$$
-$$S_{\text{raw}} = \sigma_L^2 \cdot P_{\text{illum}}$$
+
+$$
+P_{\text{illum}} = 1.0 - \left( \frac{\mu_{\text{gray}} - 128}{128} \right)^2 \in [0, 1]
+$$
+
+$$
+S_{\text{raw}} = \sigma_L^2 \cdot P_{\text{illum}}
+$$
 
 ### Step 3: Calibrated Sigmoid Mapping & Normalized Aggregation
 We map $S_{\text{raw}}$ through a calibrated logistic function ($k=0.015, x_0=150.0$):
-$$q_j = \frac{1}{1 + \exp\left(-k (S_{\text{raw}} - x_0)\right)} \in (0, 1)$$
+
+$$
+q_j = \frac{1}{1 + \exp\left(-k (S_{\text{raw}} - x_0)\right)} \in (0, 1)
+$$
+
 The normalized weights $w_j$ and the aggregated video representation $v_{\text{weighted}}$ are given by:
-$$w_j = \frac{q_j}{\sum_{k=1}^T q_k}, \qquad v_{\text{weighted}} = \sum_{j=1}^T w_j v_j$$
+
+$$
+w_j = \frac{q_j}{\sum_{k=1}^T q_k}, \qquad v_{\text{weighted}} = \sum_{j=1}^T w_j v_j
+$$
 
 * **Zero Supervision:** Requires zero manual blur bounding boxes or class labels.
-* **Ultra-Low Latency:** Runs in **$\sim$1.8 ms per frame on CPU** and $<0.3$ ms on GPU.
+* **Ultra-Low Latency:** Runs in **~1.8 ms per frame on CPU** and <0.3 ms on GPU.
 
 ---
 
