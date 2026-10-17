@@ -26,7 +26,7 @@ In modern surveillance forensics, locating a suspect across non-overlapping CCTV
                       [BERT-base Text Encoder]
                                    │
                                    ▼
-                            t ∈ ℝ^512
+                            t ∈ ℝ^256
                                    │
              Cosine Similarity S(t, v) = (t · v) / (||t|| ||v||)
                                    ▲
@@ -36,7 +36,7 @@ In modern surveillance forensics, locating a suspect across non-overlapping CCTV
                                    ▲
                                    │
   Frame 1: Crisp  ───► q_1 = 0.94 (Weight: 0.28)  ──┐
-  Frame 2: Blurred ──► q_2 = 0.12 (Weight: 0.03)  ──┼──► v_weighted = ∑ w_j v_j ∈ ℝ^512
+  Frame 2: Blurred ──► q_2 = 0.12 (Weight: 0.03)  ──┼──► v_weighted = ∑ w_j v_j ∈ ℝ^256
   Frame 3: Occluded ─► q_3 = 0.35 (Weight: 0.09)  ──┤
   Frame 4: Crisp  ───► q_4 = 0.89 (Weight: 0.26)  ──┘
 ```
